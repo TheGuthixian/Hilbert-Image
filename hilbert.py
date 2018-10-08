@@ -1,5 +1,6 @@
 from PIL import Image, ImageOps
 from math import floor
+import os
 
 counter = 0
 
@@ -15,6 +16,22 @@ def hilbert_spectrum(image_file, degree=4):
     h_spectrum = recurrent_hilbert_to_spectrum(squared_image, spectrum)
     return h_spectrum
 
+def hilbert_colour_spectrum(image_file, degree=4):
+    try:
+        image = Image.open(image_file)
+    except IOError as er:
+        return er, '\nImage file not found'
+    squared_hilbert_image = square_hilbert_image(image, image_file, degree)
+    img_r, img_g, img_b = squared_hilbert_image.split()
+    spectrum = [0 for x in range(int((2**degree)**2))]
+    h_red_spectrum = recurrent_hilbert_to_spectrum(img_r, spectrum)
+    h_green_spectrum = recurrent_hilbert_to_spectrum(img_g, spectrum)
+    h_blue_spectrum = recurrent_hilbert_to_spectrum(img_b, spectrum)
+    h_spectrum_rgb = {
+        "red": h_red_spectrum,
+        "green": h_green_spectrum,
+        "blue": h_blue_spectrum}
+    return h_spectrum_rgb
 
 def square_hilbert_image(image, filename='example.jpg', degree=6):
     # long_side = max(image.size)
@@ -74,6 +91,13 @@ def hilbert_image(spectrum, filename='example.jpg'):
     image = reccurent_hilbert_to_image(spectrum)
     image.save(filename)
 
+def hilbert_colour_image(spectrum_rgb, filename="example.jpg"):
+    image_red = reccurent_hilbert_to_image(spectrum_rgb["red"])
+    image_green = reccurent_hilbert_to_image(spectrum_rgb["green"])
+    image_blue = reccurent_hilbert_to_image(spectrum_rgb["blue"])
+    image = Image.merge("RGB", (image_red, image_green, image_blue))
+    image.save(filename)
+
 
 def reccurent_hilbert_to_image(spectrum):
     if len(spectrum) == 4:
@@ -127,15 +151,29 @@ def hilbert_image_segment(spectrum):
     pixels[1, 0] = spectrum[2]
     pixels[1, 1] = spectrum[3]
     global counter
-    image.save('hilbert/imagesegments/segment{}.png'.format(counter))
-    counter += 1
+    try:
+        image.save('hilbert/imagesegments/segment{}.png'.format(counter))
+        counter += 1
+    except FileNotFoundError as er:
+        segment_path = os.path.join('hilbert', 'imagesegments') 
+        if not os.path.exists(segment_path):
+            os.makedirs(segment_path)
+        image.save('hilbert/imagesegments/segment{}.png'.format(counter))
+        counter += 1
+        
     return image
 
-specter = hilbert_spectrum('eggs.png', 5)
-print(specter)
-hilbert_image(specter, filename='hilberteggs.png')
-seq = [floor(255*x/(32**2)) for x in range(32**2)]
-hilbert_image(seq,filename='hilbertGrad.png')
+# specter = hilbert_spectrum('eggs.png', 5)
+# print(specter)
+# hilbert_image(specter, filename='hilberteggs.png')
+# seq = [floor(255*x/(32**2)) for x in range(32**2)]
+# hilbert_image(seq,filename='hilbertGrad.png')
+# seq = [floor(255*(255-x)/(32**2)) for x in range(32**2)]
+# hilbert_image(seq,filename='hilbertGrad2.png')
 # test=[64,128,192,255]
 # image = hilbert_image_segment(test)
 # image.show()
+
+# rgb_specter = hilbert_colour_spectrum("eggs.png", 5)
+
+# hilbert_colour_image(rgb_specter, filename="colourhilberteggs.png")
